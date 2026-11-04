@@ -1,6 +1,7 @@
 import http from "node:http";
 import crypto from "node:crypto";
 import { readFileSync } from "node:fs";
+import { analisarDataAgendamento, normalizarHorario } from "./datas.js";
 
 // ============================================================
 // CONFIGURAÇÕES
@@ -199,28 +200,6 @@ function ehSaudacao(texto) {
 
 function ehProtocolo(texto) {
   return /^EMPIS-\d{4}-\d{5}$/i.test(String(texto || "").trim());
-}
-
-function dataAgendamentoValida(valor) {
-  const match = String(valor || "").trim().match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
-  if (!match) return false;
-
-  const dia = Number(match[1]);
-  const mes = Number(match[2]);
-  const ano = Number(match[3]);
-
-  const data = new Date(ano, mes - 1, dia);
-  if (
-    data.getFullYear() !== ano ||
-    data.getMonth() !== mes - 1 ||
-    data.getDate() !== dia
-  ) {
-    return false;
-  }
-
-  const hoje = new Date();
-  const amanha = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
-  return data >= amanha;
 }
 
 function horarioValido(valor) {
@@ -805,9 +784,16 @@ async function fluxo(conversa, mensagem) {
     }
 
     case "data_agendamento": {
-      if (!dataAgendamentoValida(texto)) {
+      const analise = analisarDataAgendamento(texto);
+      if (!analise.ok) {
+        const aviso =
+          analise.motivo === "formato"
+            ? "Não consegui entender essa data. Informe no formato DD/MM/AAAA. Exemplo: 25/12/2026."
+            : analise.motivo === "passado"
+              ? "Essa data já passou. Informe uma data a partir de amanhã, no formato DD/MM/AAAA."
+              : "O agendamento precisa de pelo menos 1 dia de antecedência. Informe uma data a partir de amanhã, no formato DD/MM/AAAA.";
         return {
-          texto: "Data inválida ou muito próxima. Informe uma data válida no formato DD/MM/AAAA, a partir de amanhã.",
+          texto: aviso,
           estado: "data_agendamento",
           dados,
         };
@@ -816,12 +802,13 @@ async function fluxo(conversa, mensagem) {
       return {
         texto: "Para qual horário deseja agendar? Informe no formato HH:MM. Exemplo: 13:30.",
         estado: "horario_agendamento",
-        dados: { ...dados, data_agendamento: texto },
+        dados: { ...dados, data_agendamento: analise.data },
       };
     }
 
     case "horario_agendamento": {
-      if (!horarioValido(texto)) {
+      const horario = normalizarHorario(texto);
+      if (!horario) {
         return {
           texto: "Horário inválido. Informe no formato HH:MM. Exemplo: 13:30.",
           estado: "horario_agendamento",
@@ -829,7 +816,7 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
-      return abrirChamado(conversa, { horario: texto });
+      return abrirChamado(conversa, { horario });
     }
 
     // ---------------- CONSULTA DE CHAMADO ----------------
