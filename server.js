@@ -377,7 +377,8 @@ async function abrirChamado(conversa, novosDados = {}) {
       categoria: dados.categoria,
       descricao: formatarDescricao(dados),
       local: dados.sala,
-      urgencia: dados.categoria === "urgencia" ? "imediata" : "agendada",
+      // Valores aceitos pela restrição chamados_urgencia_check do banco.
+      urgencia: dados.categoria === "urgencia" ? "impede_atividade" : "nao_impede",
       status: "aberto",
       humano: false,
       chave_idempotencia: `${conversa.telefone}-${numero}`,
