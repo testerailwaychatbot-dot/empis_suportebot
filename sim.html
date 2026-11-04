@@ -1,0 +1,27 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simulador - Suporte EMPIS</title>
+<style>
+body{margin:0;font-family:system-ui,sans-serif;background:#e5ddd5;display:flex;flex-direction:column;height:100vh}
+header{background:#075e54;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+header small{opacity:.8}button{cursor:pointer}
+#log{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+.m{max-width:75%;padding:8px 12px;border-radius:8px;white-space:pre-wrap;box-shadow:0 1px 1px #0002}
+.in{align-self:flex-end;background:#dcf8c6}.out{align-self:flex-start;background:#fff}
+form{display:flex;gap:8px;padding:10px;background:#f0f0f0}
+input{flex:1;padding:10px;border:1px solid #ccc;border-radius:20px}
+form button{background:#075e54;color:#fff;border:0;border-radius:20px;padding:0 18px}
+header button{background:#0000;color:#fff;border:1px solid #fff8;border-radius:6px;padding:4px 10px}
+</style>
+<header><div>Suporte EMPIS <small>(simulador, sem Meta; usa o banco real)</small></div><button id="r">Limpar teste</button></header>
+<div id="log"></div>
+<form id="f"><input id="t" placeholder="Digite uma mensagem (ex: oi)" autocomplete="off" autofocus><button>Enviar</button></form>
+<script>
+const phone=localStorage.simPhone||(localStorage.simPhone=String(Date.now()));
+const log=document.getElementById('log'),t=document.getElementById('t');
+const add=(c,x)=>{const d=document.createElement('div');d.className='m '+c;d.textContent=x;log.appendChild(d);log.scrollTop=log.scrollHeight};
+const post=b=>fetch('/simulate',{method:'POST',body:JSON.stringify({phone,...b})}).then(r=>r.json());
+f.onsubmit=async e=>{e.preventDefault();const x=t.value.trim();if(!x)return;t.value='';add('in',x);
+ try{(await post({text:x})).replies.forEach(r=>add('out',r))}catch{add('out','[erro no servidor]')}};
+r.onclick=async()=>{await post({reset:true});log.innerHTML='';add('out','Teste limpo: conversa, chamados e mensagens de teste apagados.')};
+add('out','Simulador pronto. Digite "oi" para começar.');
+</script></html>
