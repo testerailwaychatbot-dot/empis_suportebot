@@ -2,6 +2,7 @@ import http from "node:http";
 import crypto from "node:crypto";
 import { readFileSync } from "node:fs";
 import { analisarDataAgendamento, normalizarHorario } from "./datas.js";
+import { criarEventoAgenda, verificarDisponibilidade } from "./calendar.js";
 
 // ============================================================
 // CONFIGURAÇÕES
@@ -359,6 +360,20 @@ async function abrirChamado(conversa, novosDados = {}) {
     };
   }
 
+  if (dados.categoria === "agendamento") {
+    const disponibilidade = await verificarDisponibilidade(
+      dados.data_agendamento,
+      dados.horario
+    );
+    if (!disponibilidade.disponivel) {
+      return {
+        texto: "Esse horário já está ocupado na agenda. Informe outro horário para continuar.",
+        estado: "horario_agendamento",
+        dados,
+      };
+    }
+  }
+
   const numero = await gerarProtocolo();
   if (!numero) {
     return {
@@ -394,13 +409,27 @@ async function abrirChamado(conversa, novosDados = {}) {
   }
 
   const tipo = dados.categoria === "urgencia" ? "urgente" : "agendado";
+  let avisoAgenda = "";
+
+  if (dados.categoria === "agendamento") {
+    const evento = await criarEventoAgenda({
+      dados,
+      protocolo: numero,
+      telefone: conversa.telefone,
+    });
+    if (evento.configurado && !evento.criado) {
+      avisoAgenda = "\n\n⚠️ O chamado foi registrado, mas não consegui sincronizar este horário com o Google Agenda. O suporte deve conferir a agenda.";
+    } else if (evento.criado) {
+      avisoAgenda = "\n\n📅 Horário reservado no Google Agenda.";
+    }
+  }
 
   return {
     texto: `✅ Chamado ${tipo} registrado com sucesso!
 
 Protocolo: ${numero}
 
-Sala: ${dados.sala}
+Sala: ${dados.sala}${avisoAgenda}
 
 Guarde esse número para consultar o andamento do atendimento.
 
