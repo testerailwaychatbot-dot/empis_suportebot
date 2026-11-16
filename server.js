@@ -516,7 +516,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
       if (opcao === "1") {
         if (professorConhecido?.nome) {
           return {
-            texto: "Vamos abrir seu chamado.",
+           texto: `Olá, ${professorConhecido.nome}! Vamos abrir seu chamado.\n\n${MENU_TIPO}`,
             estado: "tipo_chamado",
             dados: { nome: professorConhecido.nome },
           };
