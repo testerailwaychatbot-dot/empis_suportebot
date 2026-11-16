@@ -3,6 +3,18 @@ import crypto from "node:crypto";
 import { readFileSync } from "node:fs";
 import { analisarDataAgendamento, normalizarHorario } from "./datas.js";
 import { criarEventoAgenda, verificarDisponibilidade } from "./calendar.js";
+import {
+  MENU,
+  normalizar,
+  selecionarOpcao,
+  personalizarResposta,
+  OPCOES_MENU,
+  OPCOES_TIPO_CHAMADO,
+  OPCOES_URGENCIA,
+  OPCOES_EQUIPAMENTO,
+  OPCOES_SIM_NAO,
+  OPCOES_CANCELAMENTO,
+} from "./dialogos.js";
 
 // ============================================================
 // CONFIGURAÇÕES
@@ -131,16 +143,6 @@ async function sendText(to, body) {
 // MENUS
 // ============================================================
 
-const MENU = `Olá! Sou o suporte virtual EMPIS.
-Como posso ajudar? Digite uma opção:
-
-1 - Abrir chamado
-2 - Consultar chamado (envie o protocolo)
-3 - Falar com um dos suportes (João Pedro ou Geliane)
-4 - Sair
-
-A qualquer momento, digite menu para voltar ao início ou sair para encerrar o atendimento.`;
-
 const MENU_TIPO = `Qual tipo de atendimento deseja?
 
 1 - Urgência
@@ -174,9 +176,6 @@ const MENU_APLICATIVOS = `Será necessário algum aplicativo específico no tabl
 
 Digite menu para voltar ou sair para encerrar.`;
 
-const SAUDACAO = `Olá! Atendimento EMPIS iniciado.
-${MENU}`;
-
 const DESPEDIDA = `Atendimento encerrado. Obrigado por entrar em contato com o suporte EMPIS!
 
 Quando precisar de ajuda novamente, basta enviar uma nova mensagem.`;
@@ -184,14 +183,6 @@ Quando precisar de ajuda novamente, basta enviar uma nova mensagem.`;
 // ============================================================
 // FUNÇÕES AUXILIARES
 // ============================================================
-
-function normalizar(texto) {
-  return String(texto || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
-}
 
 function ehSaudacao(texto) {
   const t = normalizar(texto);
@@ -207,8 +198,11 @@ function horarioValido(valor) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(valor || "").trim());
 }
 
-function formatarDescricao(dados) {
+function formatarDescricao(dados, telefone) {
   const linhas = [];
+
+  linhas.push(`Solicitante: ${dados.nome || "Não informado"}`);
+  linhas.push(`Telefone: ${telefone || "Não informado"}`);
 
   if (dados.categoria === "urgencia") {
     linhas.push("TIPO: Atendimento urgente");
@@ -229,7 +223,7 @@ function formatarDescricao(dados) {
     linhas.push(`Horário: ${dados.horario || "Não informado"}`);
   }
 
-  linhas.push(`Sala: ${dados.sala || "Não informada"}`);
+  linhas.push(`Sala de origem/atendimento: ${dados.sala || "Não informada"}`);
   return linhas.join("\n").slice(0, 2000);
 }
 
@@ -304,6 +298,49 @@ async function saveConversa(conversa) {
   });
 }
 
+async function obterProfessor(telefone) {
+  const resultado = await sb(
+    `professores?telefone=eq.${encodeURIComponent(telefone)}&limit=1`
+  );
+
+  if (!Array.isArray(resultado)) return { ok: false, professor: null };
+  return { ok: true, professor: resultado[0] || null };
+}
+
+async function salvarProfessor(telefone, nome) {
+  const encontrado = await obterProfessor(telefone);
+  if (!encontrado.ok) return null;
+
+  if (!encontrado.professor) {
+    const criado = await sb("professores", {
+      method: "POST",
+      prefer: "return=representation",
+      body: {
+        nome,
+        telefone,
+        consentimento_em: new Date().toISOString(),
+      },
+    });
+    return Array.isArray(criado) ? criado[0] || null : null;
+  }
+
+  if (encontrado.professor.nome === nome) return encontrado.professor;
+
+  const atualizado = await sb(
+    `professores?id=eq.${encodeURIComponent(encontrado.professor.id)}`,
+    {
+      method: "PATCH",
+      prefer: "return=representation",
+      body: {
+        nome,
+        consentimento_em: new Date().toISOString(),
+      },
+    }
+  );
+
+  return Array.isArray(atualizado) ? atualizado[0] || null : null;
+}
+
 // ============================================================
 // CADASTRO E ABERTURA DE CHAMADOS
 // ============================================================
@@ -319,38 +356,7 @@ async function abrirChamado(conversa, novosDados = {}) {
     };
   }
 
-  let professor = (
-    await sb(
-      `professores?telefone=eq.${encodeURIComponent(conversa.telefone)}&limit=1`
-    )
-  )?.[0];
-
-  if (!professor) {
-    professor = (
-      await sb("professores", {
-        method: "POST",
-        prefer: "return=representation",
-        body: {
-          nome: dados.nome,
-          telefone: conversa.telefone,
-          consentimento_em: new Date().toISOString(),
-        },
-      })
-    )?.[0];
-  } else if (professor.nome !== dados.nome) {
-    const atualizado = await sb(
-      `professores?id=eq.${professor.id}`,
-      {
-        method: "PATCH",
-        prefer: "return=representation",
-        body: {
-          nome: dados.nome,
-          consentimento_em: new Date().toISOString(),
-        },
-      }
-    );
-    if (atualizado?.[0]) professor = atualizado[0];
-  }
+  const professor = await salvarProfessor(conversa.telefone, dados.nome);
 
   if (!professor) {
     return {
@@ -390,7 +396,7 @@ async function abrirChamado(conversa, novosDados = {}) {
       protocolo: numero,
       professor_id: professor.id,
       categoria: dados.categoria,
-      descricao: formatarDescricao(dados),
+      descricao: formatarDescricao(dados, conversa.telefone),
       local: dados.sala,
       // Valores aceitos pela restrição chamados_urgencia_check do banco.
       urgencia: dados.categoria === "urgencia" ? "impede_atividade" : "nao_impede",
@@ -408,7 +414,6 @@ async function abrirChamado(conversa, novosDados = {}) {
     };
   }
 
-  const tipo = dados.categoria === "urgencia" ? "urgente" : "agendado";
   let avisoAgenda = "";
 
   if (dados.categoria === "agendamento") {
@@ -424,16 +429,30 @@ async function abrirChamado(conversa, novosDados = {}) {
     }
   }
 
+  const textoConfirmacao = dados.categoria === "agendamento"
+    ? [
+        "✅ Chamado agendado com sucesso!",
+        `Protocolo: ${numero}`,
+        `Solicitante: ${dados.nome}`,
+        `Telefone: ${conversa.telefone}`,
+        `Equipamento: ${dados.equipamento}`,
+        `Quantidade: ${dados.quantidade}`,
+        `Sala de origem/atendimento: ${dados.sala}`,
+        `Data de uso: ${dados.data_agendamento}`,
+        `Horário: ${dados.horario}`,
+        dados.aplicativos ? `Aplicativos necessários: ${dados.aplicativos}` : "",
+      ].filter(Boolean).join("\n")
+    : [
+        "✅ Chamado urgente registrado com sucesso!",
+        `Protocolo: ${numero}`,
+        `Solicitante: ${dados.nome}`,
+        `Telefone: ${conversa.telefone}`,
+        `Problema: ${dados.problema || "Não informado"}`,
+        `Sala de origem/atendimento: ${dados.sala}`,
+      ].join("\n");
+
   return {
-    texto: `✅ Chamado ${tipo} registrado com sucesso!
-
-Protocolo: ${numero}
-
-Sala: ${dados.sala}${avisoAgenda}
-
-Guarde esse número para consultar o andamento do atendimento.
-
-Digite menu para voltar ao início ou sair para encerrar.`,
+    texto: `${textoConfirmacao}${avisoAgenda}\n\nDigite menu para abrir outro chamado ou sair para encerrar.`,
     estado: "menu",
     dados: {},
     protocolo: numero,
@@ -445,7 +464,7 @@ Digite menu para voltar ao início ou sair para encerrar.`,
 // FLUXO DE ATENDIMENTO
 // ============================================================
 
-async function fluxo(conversa, mensagem) {
+async function fluxo(conversa, mensagem, professorConhecido = null) {
   const texto = String(mensagem || "").trim();
   const t = normalizar(texto);
   const dados = conversa.dados || {};
@@ -482,7 +501,7 @@ async function fluxo(conversa, mensagem) {
   // Primeira mensagem de uma conversa nova ou atendimento encerrado.
   if (conversa.estado === "inicio" || conversa.estado === "encerrado") {
     return {
-      texto: SAUDACAO,
+      texto: MENU,
       estado: "menu",
       dados: {},
       pausar: false,
@@ -492,7 +511,17 @@ async function fluxo(conversa, mensagem) {
   switch (conversa.estado) {
     // ---------------- MENU PRINCIPAL ----------------
     case "menu": {
-      if (t === "1") {
+      const opcao = selecionarOpcao(texto, OPCOES_MENU);
+
+      if (opcao === "1") {
+        if (professorConhecido?.nome) {
+          return {
+            texto: "Vamos abrir seu chamado.",
+            estado: "tipo_chamado",
+            dados: { nome: professorConhecido.nome },
+          };
+        }
+
         return {
           texto: "Informe seu nome e sobrenome.\n\nAo continuar você concorda com o uso dos seus dados para atendimento.\n\nDigite 4 para sair ou menu para voltar.",
           estado: "nome",
@@ -500,7 +529,7 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
-      if (t === "2") {
+      if (opcao === "2") {
         return {
           texto: "Envie o número do protocolo.\nExemplo: EMPIS-2026-00001\n\nDigite menu para voltar ou sair para encerrar.",
           estado: "consulta_protocolo",
@@ -508,16 +537,16 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
-      if (t === "3") {
+      if (opcao === "3") {
         return {
-          texto: "Certo! Um dos suportes (João Pedro ou Geliane) foi avisado sobre sua solicitação. Aguarde o contato.\n\nPara voltar ao atendimento automático, digite menu.",
+          texto: "Certo! Seu pedido para falar com João ou Geliane foi registrado. Aguarde o contato.\n\nPara voltar ao atendimento automático, digite menu.",
           estado: "menu",
           dados: {},
           pausar: true,
         };
       }
 
-      if (t === "4") {
+      if (opcao === "4") {
         return {
           texto: DESPEDIDA,
           estado: "encerrado",
@@ -538,7 +567,8 @@ async function fluxo(conversa, mensagem) {
         return { texto: DESPEDIDA, estado: "encerrado", dados: {} };
       }
 
-      if (texto.length < 3 || !texto.includes(" ")) {
+      const nomeCompleto = texto.replace(/\s+/g, " ").trim();
+      if (nomeCompleto.length < 3 || nomeCompleto.split(" ").length < 2) {
         return {
           texto: "Por favor, informe seu nome e sobrenome.\nExemplo: Maria Silva",
           estado: "nome",
@@ -546,16 +576,27 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
+      const professor = await salvarProfessor(conversa.telefone, nomeCompleto);
+      if (!professor) {
+        return {
+          texto: "Não consegui salvar seu nome junto ao telefone agora. Tente informar seu nome novamente em instantes.",
+          estado: "nome",
+          dados: {},
+        };
+      }
+
       return {
         texto: MENU_TIPO,
         estado: "tipo_chamado",
-        dados: { nome: texto },
+        dados: { nome: professor.nome || nomeCompleto },
       };
     }
 
     // ---------------- TIPO DE CHAMADO ----------------
     case "tipo_chamado": {
-      if (t === "1" || t === "urgencia") {
+      const opcao = selecionarOpcao(texto, OPCOES_TIPO_CHAMADO);
+
+      if (opcao === "1") {
         return {
           texto: MENU_URGENCIA,
           estado: "urgencia_problema",
@@ -563,7 +604,7 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
-      if (t === "2" || t === "agendamento") {
+      if (opcao === "2") {
         return {
           texto: MENU_AGENDAMENTO,
           estado: "agendamento_equipamento",
@@ -580,7 +621,9 @@ async function fluxo(conversa, mensagem) {
 
     // ---------------- URGÊNCIA ----------------
     case "urgencia_problema": {
-      if (t === "1") {
+      const opcao = selecionarOpcao(texto, OPCOES_URGENCIA);
+
+      if (opcao === "1") {
         return {
           texto: "Entendi: ligar projetor.\n\nEm qual sala está o projetor?",
           estado: "sala_urgencia",
@@ -588,7 +631,7 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
-      if (t === "2") {
+      if (opcao === "2") {
         return {
           texto: "Entendi: computador não liga.\n\nEm qual sala está o computador?",
           estado: "sala_urgencia",
@@ -596,7 +639,7 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
-      if (t === "3") {
+      if (opcao === "3") {
         return {
           texto: "Entendi: sem Internet.\n\nEm qual sala está ocorrendo o problema?",
           estado: "sala_urgencia",
@@ -604,7 +647,7 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
-      if (t === "4") {
+      if (opcao === "4") {
         return {
           texto: "Descreva, por favor, qual é o outro problema.",
           estado: "problema_outro",
@@ -612,7 +655,7 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
-      if (t === "5") {
+      if (opcao === "5") {
         return {
           texto: "Tem certeza de que deseja cancelar a abertura deste chamado?\n\nDigite SIM para cancelar ou NÃO para continuar.",
           estado: "confirmar_cancelamento",
@@ -648,7 +691,9 @@ async function fluxo(conversa, mensagem) {
     }
 
     case "confirmar_cancelamento": {
-      if (t === "sim" || t === "s" || t === "1") {
+      const opcao = selecionarOpcao(texto, OPCOES_CANCELAMENTO);
+
+      if (opcao === "1") {
         return {
           texto: "A abertura deste chamado foi cancelada. Nenhum chamado foi registrado.\n\n" + MENU,
           estado: "menu",
@@ -656,7 +701,7 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
-      if (t === "nao" || t === "n" || t === "2") {
+      if (opcao === "2") {
         return {
           texto: MENU_URGENCIA,
           estado: "urgencia_problema",
@@ -685,7 +730,9 @@ async function fluxo(conversa, mensagem) {
 
     // ---------------- AGENDAMENTO ----------------
     case "agendamento_equipamento": {
-      if (t === "1") {
+      const opcao = selecionarOpcao(texto, OPCOES_EQUIPAMENTO);
+
+      if (opcao === "1") {
         return {
           texto: MENU_APLICATIVOS,
           estado: "tablet_aplicativo",
@@ -693,7 +740,7 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
-      if (t === "2") {
+      if (opcao === "2") {
         return {
           texto: "Quantos Chromebooks deseja agendar?",
           estado: "quantidade",
@@ -701,7 +748,7 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
-      if (t === "3") {
+      if (opcao === "3") {
         return {
           texto: "Qual outro equipamento deseja agendar?",
           estado: "equipamento_outro",
@@ -709,7 +756,7 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
-      if (t === "4") {
+      if (opcao === "4") {
         return {
           texto: DESPEDIDA,
           estado: "encerrado",
@@ -725,7 +772,9 @@ async function fluxo(conversa, mensagem) {
     }
 
     case "tablet_aplicativo": {
-      if (t === "1" || t === "sim") {
+      const opcao = selecionarOpcao(texto, OPCOES_SIM_NAO);
+
+      if (opcao === "1") {
         return {
           texto: "Informe os nomes dos aplicativos necessários no tablet.",
           estado: "tablet_aplicativos",
@@ -733,7 +782,7 @@ async function fluxo(conversa, mensagem) {
         };
       }
 
-      if (t === "2" || t === "nao") {
+      if (opcao === "2") {
         return {
           texto: "Quantos tablets deseja agendar?",
           estado: "quantidade",
@@ -958,14 +1007,20 @@ async function handleMessage(mensagem, send = sendText) {
     return;
   }
 
+  const cadastro = await obterProfessor(telefone);
+  const professorConhecido = cadastro.ok ? cadastro.professor : null;
+
   const resposta = texto
-    ? await fluxo(conversa, texto)
+    ? await fluxo(conversa, texto, professorConhecido)
     : {
         texto: "Por enquanto consigo entender apenas mensagens de texto. Digite menu para ver as opções.",
         estado: conversa.estado || "menu",
         dados: conversa.dados || {},
         pausar: !!conversa.bot_pausado,
       };
+
+  const nomeUsuario = resposta.dados?.nome || conversa.dados?.nome || professorConhecido?.nome;
+  resposta.texto = personalizarResposta(resposta.texto, nomeUsuario);
 
   await saveConversa({
     telefone,
