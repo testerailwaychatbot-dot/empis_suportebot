@@ -17,7 +17,7 @@ import {
 } from "./dialogos.js";
 
 // ============================================================
-// CONFIGURAÇÕES
+// CONFIGURAÃ‡Ã•ES
 // ============================================================
 
 const {
@@ -33,7 +33,7 @@ const PORT = Number(process.env.PORT || 8080);
 const TIMEOUT_MS = 15000;
 const MAX_BODY = 1024 * 1024;
 
-// QR Code é o padrão. Só use WA_MODE=meta se futuramente migrar para a API.
+// QR Code Ã© o padrÃ£o. SÃ³ use WA_MODE=meta se futuramente migrar para a API.
 const QR_MODE = (process.env.WA_MODE || "qr").toLowerCase() === "qr";
 
 const required = QR_MODE
@@ -49,7 +49,7 @@ const required = QR_MODE
 
 const missing = required.filter((key) => !process.env[key]);
 if (missing.length) {
-  console.warn("Variáveis ausentes:", missing.join(", "));
+  console.warn("VariÃ¡veis ausentes:", missing.join(", "));
 }
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
@@ -93,7 +93,7 @@ async function sb(path, { method = "GET", body, prefer } = {}) {
     const content = await response.text();
     return content ? JSON.parse(content) : [];
   } catch (error) {
-    console.error("Falha na comunicação com Supabase:", error.message);
+    console.error("Falha na comunicaÃ§Ã£o com Supabase:", error.message);
     return null;
   }
 }
@@ -102,11 +102,11 @@ async function sb(path, { method = "GET", body, prefer } = {}) {
 // ENVIO DE MENSAGENS
 // ============================================================
 
-// No modo QR, wa.js fornece a função de envio diretamente.
-// Esta função fica disponível apenas para compatibilidade com a API Meta.
+// No modo QR, wa.js fornece a funÃ§Ã£o de envio diretamente.
+// Esta funÃ§Ã£o fica disponÃ­vel apenas para compatibilidade com a API Meta.
 async function sendText(to, body) {
   if (QR_MODE) {
-    console.error("Envio padrão da Meta chamado no modo QR. Use o envio fornecido por wa.js.");
+    console.error("Envio padrÃ£o da Meta chamado no modo QR. Use o envio fornecido por wa.js.");
     return false;
   }
 
@@ -145,15 +145,15 @@ async function sendText(to, body) {
 
 const MENU_TIPO = `Qual tipo de atendimento deseja?
 
-1 - Urgência
+1 - UrgÃªncia
 2 - Agendamento
 
 Digite menu para voltar ou sair para encerrar.`;
 
-const MENU_URGENCIA = `Qual é o problema?
+const MENU_URGENCIA = `Qual Ã© o problema?
 
 1 - Ligar projetor
-2 - Computador não liga
+2 - Computador nÃ£o liga
 3 - Sem Internet
 4 - Outro
 5 - Cancelar chamado
@@ -169,10 +169,10 @@ const MENU_AGENDAMENTO = `Qual equipamento deseja agendar?
 
 Digite menu para voltar.`;
 
-const MENU_APLICATIVOS = `Será necessário algum aplicativo específico no tablet?
+const MENU_APLICATIVOS = `SerÃ¡ necessÃ¡rio algum aplicativo especÃ­fico no tablet?
 
 1 - Sim
-2 - Não
+2 - NÃ£o
 
 Digite menu para voltar ou sair para encerrar.`;
 
@@ -181,12 +181,12 @@ const DESPEDIDA = `Atendimento encerrado. Obrigado por entrar em contato com o s
 Quando precisar de ajuda novamente, basta enviar uma nova mensagem.`;
 
 // ============================================================
-// FUNÇÕES AUXILIARES
+// FUNÃ‡Ã•ES AUXILIARES
 // ============================================================
 
 function ehSaudacao(texto) {
   const t = normalizar(texto);
-  return /^(oi|ola|bom dia|boa tarde|boa noite|ei|eai|e ai|hey|hello|ol[aá] tudo bem)[!.?,\s]*$/i.test(t)
+  return /^(oi|ola|bom dia|boa tarde|boa noite|ei|eai|e ai|hey|hello|ol[aÃ¡] tudo bem)[!.?,\s]*$/i.test(t)
     || /^(bom dia|boa tarde|boa noite)\b/i.test(t);
 }
 
@@ -201,29 +201,29 @@ function horarioValido(valor) {
 function formatarDescricao(dados, telefone) {
   const linhas = [];
 
-  linhas.push(`Solicitante: ${dados.nome || "Não informado"}`);
-  linhas.push(`Telefone: ${telefone || "Não informado"}`);
+  linhas.push(`Solicitante: ${dados.nome || "NÃ£o informado"}`);
+  linhas.push(`Telefone: ${telefone || "NÃ£o informado"}`);
 
   if (dados.categoria === "urgencia") {
     linhas.push("TIPO: Atendimento urgente");
-    linhas.push(`Problema: ${dados.problema || "Não informado"}`);
+    linhas.push(`Problema: ${dados.problema || "NÃ£o informado"}`);
     if (dados.descricao_problema) {
-      linhas.push(`Descrição adicional: ${dados.descricao_problema}`);
+      linhas.push(`DescriÃ§Ã£o adicional: ${dados.descricao_problema}`);
     }
   } else {
     linhas.push("TIPO: Agendamento");
-    linhas.push(`Equipamento: ${dados.equipamento || "Não informado"}`);
-    linhas.push(`Quantidade: ${dados.quantidade || "Não informada"}`);
+    linhas.push(`Equipamento: ${dados.equipamento || "NÃ£o informado"}`);
+    linhas.push(`Quantidade: ${dados.quantidade || "NÃ£o informada"}`);
     if (dados.aplicativos) {
-      linhas.push(`Aplicativos necessários: ${dados.aplicativos}`);
+      linhas.push(`Aplicativos necessÃ¡rios: ${dados.aplicativos}`);
     } else if (dados.precisa_aplicativo === false) {
-      linhas.push("Aplicativo específico: Não");
+      linhas.push("Aplicativo especÃ­fico: NÃ£o");
     }
-    linhas.push(`Data de uso: ${dados.data_agendamento || "Não informada"}`);
-    linhas.push(`Horário: ${dados.horario || "Não informado"}`);
+    linhas.push(`Data de uso: ${dados.data_agendamento || "NÃ£o informada"}`);
+    linhas.push(`HorÃ¡rio: ${dados.horario || "NÃ£o informado"}`);
   }
 
-  linhas.push(`Sala de origem/atendimento: ${dados.sala || "Não informada"}`);
+  linhas.push(`Sala de origem/atendimento: ${dados.sala || "NÃ£o informada"}`);
   return linhas.join("\n").slice(0, 2000);
 }
 
@@ -350,7 +350,7 @@ async function abrirChamado(conversa, novosDados = {}) {
 
   if (!dados.nome || !dados.sala || !dados.categoria) {
     return {
-      texto: "Faltam informações para abrir o chamado. Digite menu para começar novamente.",
+      texto: "Faltam informaÃ§Ãµes para abrir o chamado. Digite menu para comeÃ§ar novamente.",
       estado: "menu",
       dados: {},
     };
@@ -360,7 +360,7 @@ async function abrirChamado(conversa, novosDados = {}) {
 
   if (!professor) {
     return {
-      texto: "Não consegui localizar ou cadastrar seus dados no momento. Tente novamente mais tarde.",
+      texto: "NÃ£o consegui localizar ou cadastrar seus dados no momento. Tente novamente mais tarde.",
       estado: "menu",
       dados: {},
     };
@@ -373,7 +373,7 @@ async function abrirChamado(conversa, novosDados = {}) {
     );
     if (!disponibilidade.disponivel) {
       return {
-        texto: "Esse horário já está ocupado na agenda. Informe outro horário para continuar.",
+        texto: "Esse horÃ¡rio jÃ¡ estÃ¡ ocupado na agenda. Informe outro horÃ¡rio para continuar.",
         estado: "horario_agendamento",
         dados,
       };
@@ -383,7 +383,7 @@ async function abrirChamado(conversa, novosDados = {}) {
   const numero = await gerarProtocolo();
   if (!numero) {
     return {
-      texto: "Não consegui gerar o protocolo agora. Tente novamente em instantes.",
+      texto: "NÃ£o consegui gerar o protocolo agora. Tente novamente em instantes.",
       estado: "menu",
       dados: {},
     };
@@ -398,7 +398,7 @@ async function abrirChamado(conversa, novosDados = {}) {
       categoria: dados.categoria,
       descricao: formatarDescricao(dados, conversa.telefone),
       local: dados.sala,
-      // Valores aceitos pela restrição chamados_urgencia_check do banco.
+      // Valores aceitos pela restriÃ§Ã£o chamados_urgencia_check do banco.
       urgencia: dados.categoria === "urgencia" ? "impede_atividade" : "nao_impede",
       status: "aberto",
       humano: false,
@@ -408,7 +408,7 @@ async function abrirChamado(conversa, novosDados = {}) {
 
   if (!chamado?.[0]) {
     return {
-      texto: "Não consegui registrar o chamado no banco de dados. Nenhum protocolo foi confirmado. Tente novamente.",
+      texto: "NÃ£o consegui registrar o chamado no banco de dados. Nenhum protocolo foi confirmado. Tente novamente.",
       estado: "menu",
       dados: {},
     };
@@ -423,15 +423,15 @@ async function abrirChamado(conversa, novosDados = {}) {
       telefone: conversa.telefone,
     });
     if (evento.configurado && !evento.criado) {
-      avisoAgenda = "\n\n⚠️ O chamado foi registrado, mas não consegui sincronizar este horário com o Google Agenda. O suporte deve conferir a agenda.";
+      avisoAgenda = "\n\nâš ï¸ O chamado foi registrado, mas nÃ£o consegui sincronizar este horÃ¡rio com o Google Agenda. O suporte deve conferir a agenda.";
     } else if (evento.criado) {
-      avisoAgenda = "\n\n📅 Horário reservado no Google Agenda.";
+      avisoAgenda = "\n\nðŸ“… HorÃ¡rio reservado no Google Agenda.";
     }
   }
 
   const textoConfirmacao = dados.categoria === "agendamento"
     ? [
-        "✅ Chamado agendado com sucesso!",
+        "âœ… Chamado agendado com sucesso!",
         `Protocolo: ${numero}`,
         `Solicitante: ${dados.nome}`,
         `Telefone: ${conversa.telefone}`,
@@ -439,15 +439,15 @@ async function abrirChamado(conversa, novosDados = {}) {
         `Quantidade: ${dados.quantidade}`,
         `Sala de origem/atendimento: ${dados.sala}`,
         `Data de uso: ${dados.data_agendamento}`,
-        `Horário: ${dados.horario}`,
-        dados.aplicativos ? `Aplicativos necessários: ${dados.aplicativos}` : "",
+        `HorÃ¡rio: ${dados.horario}`,
+        dados.aplicativos ? `Aplicativos necessÃ¡rios: ${dados.aplicativos}` : "",
       ].filter(Boolean).join("\n")
     : [
-        "✅ Chamado urgente registrado com sucesso!",
+        "âœ… Chamado urgente registrado com sucesso!",
         `Protocolo: ${numero}`,
         `Solicitante: ${dados.nome}`,
         `Telefone: ${conversa.telefone}`,
-        `Problema: ${dados.problema || "Não informado"}`,
+        `Problema: ${dados.problema || "NÃ£o informado"}`,
         `Sala de origem/atendimento: ${dados.sala}`,
       ].join("\n");
 
@@ -488,7 +488,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
     };
   }
 
-  // Saudações mostram o menu mesmo se a pessoa estiver em outra etapa.
+  // SaudaÃ§Ãµes mostram o menu mesmo se a pessoa estiver em outra etapa.
   if (ehSaudacao(texto)) {
     return {
       texto: MENU,
@@ -516,13 +516,14 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
       if (opcao === "1") {
         if (professorConhecido?.nome) {
           return {
-           texto: `Olá, ${professorConhecido.nome}! Vamos abrir seu chamado.\n\n${MENU_TIPO}`,
+            texto: `OlÃ¡, ${professorConhecido.nome}! Vamos abrir seu chamado.\n\n${MENU_TIPO}`,
+            estado: "tipo_chamado",
             dados: { nome: professorConhecido.nome },
           };
         }
 
         return {
-          texto: "Informe seu nome e sobrenome.\n\nAo continuar você concorda com o uso dos seus dados para atendimento.\n\nDigite 4 para sair ou menu para voltar.",
+          texto: "Informe seu nome e sobrenome.\n\nAo continuar vocÃª concorda com o uso dos seus dados para atendimento.\n\nDigite 4 para sair ou menu para voltar.",
           estado: "nome",
           dados: {},
         };
@@ -530,7 +531,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
 
       if (opcao === "2") {
         return {
-          texto: "Envie o número do protocolo.\nExemplo: EMPIS-2026-00001\n\nDigite menu para voltar ou sair para encerrar.",
+          texto: "Envie o nÃºmero do protocolo.\nExemplo: EMPIS-2026-00001\n\nDigite menu para voltar ou sair para encerrar.",
           estado: "consulta_protocolo",
           dados: {},
         };
@@ -538,7 +539,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
 
       if (opcao === "3") {
         return {
-          texto: "Certo! Seu pedido para falar com João ou Geliane foi registrado. Aguarde o contato.\n\nPara voltar ao atendimento automático, digite menu.",
+          texto: "Certo! Seu pedido para falar com JoÃ£o ou Geliane foi registrado. Aguarde o contato.\n\nPara voltar ao atendimento automÃ¡tico, digite menu.",
           estado: "menu",
           dados: {},
           pausar: true,
@@ -554,7 +555,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
       }
 
       return {
-        texto: `Não reconheci essa opção.\n\n${MENU}`,
+        texto: `NÃ£o reconheci essa opÃ§Ã£o.\n\n${MENU}`,
         estado: "menu",
         dados: {},
       };
@@ -578,7 +579,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
       const professor = await salvarProfessor(conversa.telefone, nomeCompleto);
       if (!professor) {
         return {
-          texto: "Não consegui salvar seu nome junto ao telefone agora. Tente informar seu nome novamente em instantes.",
+          texto: "NÃ£o consegui salvar seu nome junto ao telefone agora. Tente informar seu nome novamente em instantes.",
           estado: "nome",
           dados: {},
         };
@@ -612,19 +613,19 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
       }
 
       return {
-        texto: "Opção inválida. Digite 1 para Urgência ou 2 para Agendamento.\n\nDigite menu para voltar.",
+        texto: "OpÃ§Ã£o invÃ¡lida. Digite 1 para UrgÃªncia ou 2 para Agendamento.\n\nDigite menu para voltar.",
         estado: "tipo_chamado",
         dados,
       };
     }
 
-    // ---------------- URGÊNCIA ----------------
+    // ---------------- URGÃŠNCIA ----------------
     case "urgencia_problema": {
       const opcao = selecionarOpcao(texto, OPCOES_URGENCIA);
 
       if (opcao === "1") {
         return {
-          texto: "Entendi: ligar projetor.\n\nEm qual sala está o projetor?",
+          texto: "Entendi: ligar projetor.\n\nEm qual sala estÃ¡ o projetor?",
           estado: "sala_urgencia",
           dados: { ...dados, problema: "Ligar projetor" },
         };
@@ -632,15 +633,15 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
 
       if (opcao === "2") {
         return {
-          texto: "Entendi: computador não liga.\n\nEm qual sala está o computador?",
+          texto: "Entendi: computador nÃ£o liga.\n\nEm qual sala estÃ¡ o computador?",
           estado: "sala_urgencia",
-          dados: { ...dados, problema: "Computador não liga" },
+          dados: { ...dados, problema: "Computador nÃ£o liga" },
         };
       }
 
       if (opcao === "3") {
         return {
-          texto: "Entendi: sem Internet.\n\nEm qual sala está ocorrendo o problema?",
+          texto: "Entendi: sem Internet.\n\nEm qual sala estÃ¡ ocorrendo o problema?",
           estado: "sala_urgencia",
           dados: { ...dados, problema: "Sem Internet" },
         };
@@ -648,7 +649,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
 
       if (opcao === "4") {
         return {
-          texto: "Descreva, por favor, qual é o outro problema.",
+          texto: "Descreva, por favor, qual Ã© o outro problema.",
           estado: "problema_outro",
           dados,
         };
@@ -656,7 +657,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
 
       if (opcao === "5") {
         return {
-          texto: "Tem certeza de que deseja cancelar a abertura deste chamado?\n\nDigite SIM para cancelar ou NÃO para continuar.",
+          texto: "Tem certeza de que deseja cancelar a abertura deste chamado?\n\nDigite SIM para cancelar ou NÃƒO para continuar.",
           estado: "confirmar_cancelamento",
           dados,
         };
@@ -672,14 +673,14 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
     case "problema_outro": {
       if (texto.length < 3) {
         return {
-          texto: "Escreva uma descrição um pouco mais detalhada do problema.",
+          texto: "Escreva uma descriÃ§Ã£o um pouco mais detalhada do problema.",
           estado: "problema_outro",
           dados,
         };
       }
 
       return {
-        texto: "Obrigado pela descrição. Em qual sala está ocorrendo o problema?",
+        texto: "Obrigado pela descriÃ§Ã£o. Em qual sala estÃ¡ ocorrendo o problema?",
         estado: "sala_urgencia",
         dados: {
           ...dados,
@@ -709,7 +710,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
       }
 
       return {
-        texto: "Responda SIM para cancelar ou NÃO para continuar.",
+        texto: "Responda SIM para cancelar ou NÃƒO para continuar.",
         estado: "confirmar_cancelamento",
         dados,
       };
@@ -718,7 +719,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
     case "sala_urgencia": {
       if (texto.length < 1) {
         return {
-          texto: "Informe a sala onde está ocorrendo o problema.",
+          texto: "Informe a sala onde estÃ¡ ocorrendo o problema.",
           estado: "sala_urgencia",
           dados,
         };
@@ -775,7 +776,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
 
       if (opcao === "1") {
         return {
-          texto: "Informe os nomes dos aplicativos necessários no tablet.",
+          texto: "Informe os nomes dos aplicativos necessÃ¡rios no tablet.",
           estado: "tablet_aplicativos",
           dados: { ...dados, precisa_aplicativo: true },
         };
@@ -790,7 +791,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
       }
 
       return {
-        texto: "Responda 1 para Sim ou 2 para Não.\n\n" + MENU_APLICATIVOS,
+        texto: "Responda 1 para Sim ou 2 para NÃ£o.\n\n" + MENU_APLICATIVOS,
         estado: "tablet_aplicativo",
         dados,
       };
@@ -806,7 +807,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
       }
 
       return {
-        texto: "Anotei os aplicativos necessários.\n\nQuantos tablets deseja agendar?",
+        texto: "Anotei os aplicativos necessÃ¡rios.\n\nQuantos tablets deseja agendar?",
         estado: "quantidade",
         dados: { ...dados, aplicativos: texto },
       };
@@ -839,7 +840,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
       }
 
       return {
-        texto: "Em qual sala o equipamento será utilizado?",
+        texto: "Em qual sala o equipamento serÃ¡ utilizado?",
         estado: "sala_agendamento",
         dados: { ...dados, quantidade },
       };
@@ -848,14 +849,14 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
     case "sala_agendamento": {
       if (!texto) {
         return {
-          texto: "Informe a sala onde o equipamento será utilizado.",
+          texto: "Informe a sala onde o equipamento serÃ¡ utilizado.",
           estado: "sala_agendamento",
           dados,
         };
       }
 
       return {
-        texto: "Para qual data deseja agendar? Informe no formato DD/MM/AAAA. O agendamento deve ser feito com pelo menos 1 dia de antecedência.",
+        texto: "Para qual data deseja agendar? Informe no formato DD/MM/AAAA. O agendamento deve ser feito com pelo menos 1 dia de antecedÃªncia.",
         estado: "data_agendamento",
         dados: { ...dados, sala: texto },
       };
@@ -866,10 +867,10 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
       if (!analise.ok) {
         const aviso =
           analise.motivo === "formato"
-            ? "Não consegui entender essa data. Informe no formato DD/MM/AAAA. Exemplo: 25/12/2026."
+            ? "NÃ£o consegui entender essa data. Informe no formato DD/MM/AAAA. Exemplo: 25/12/2026."
             : analise.motivo === "passado"
-              ? "Essa data já passou. Informe uma data a partir de amanhã, no formato DD/MM/AAAA."
-              : "O agendamento precisa de pelo menos 1 dia de antecedência. Informe uma data a partir de amanhã, no formato DD/MM/AAAA.";
+              ? "Essa data jÃ¡ passou. Informe uma data a partir de amanhÃ£, no formato DD/MM/AAAA."
+              : "O agendamento precisa de pelo menos 1 dia de antecedÃªncia. Informe uma data a partir de amanhÃ£, no formato DD/MM/AAAA.";
         return {
           texto: aviso,
           estado: "data_agendamento",
@@ -878,7 +879,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
       }
 
       return {
-        texto: "Para qual horário deseja agendar? Informe no formato HH:MM. Exemplo: 13:30.",
+        texto: "Para qual horÃ¡rio deseja agendar? Informe no formato HH:MM. Exemplo: 13:30.",
         estado: "horario_agendamento",
         dados: { ...dados, data_agendamento: analise.data },
       };
@@ -888,7 +889,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
       const horario = normalizarHorario(texto);
       if (!horario) {
         return {
-          texto: "Horário inválido. Informe no formato HH:MM. Exemplo: 13:30.",
+          texto: "HorÃ¡rio invÃ¡lido. Informe no formato HH:MM. Exemplo: 13:30.",
           estado: "horario_agendamento",
           dados,
         };
@@ -901,7 +902,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
     case "consulta_protocolo": {
       if (!ehProtocolo(texto)) {
         return {
-          texto: "O protocolo não está no formato esperado.\nExemplo: EMPIS-2026-00001\n\nEnvie novamente ou digite menu para voltar.",
+          texto: "O protocolo nÃ£o estÃ¡ no formato esperado.\nExemplo: EMPIS-2026-00001\n\nEnvie novamente ou digite menu para voltar.",
           estado: "consulta_protocolo",
           dados,
         };
@@ -915,7 +916,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
 
       if (!professor) {
         return {
-          texto: "Não encontrei um cadastro associado a este número. Digite menu para voltar.",
+          texto: "NÃ£o encontrei um cadastro associado a este nÃºmero. Digite menu para voltar.",
           estado: "menu",
           dados: {},
         };
@@ -929,7 +930,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
 
       if (!chamado) {
         return {
-          texto: "Não encontrei esse protocolo entre os chamados vinculados ao seu número. Confira o número e tente novamente, ou digite menu para voltar.",
+          texto: "NÃ£o encontrei esse protocolo entre os chamados vinculados ao seu nÃºmero. Confira o nÃºmero e tente novamente, ou digite menu para voltar.",
           estado: "consulta_protocolo",
           dados: {},
         };
@@ -941,7 +942,7 @@ async function fluxo(conversa, mensagem, professorConhecido = null) {
 Protocolo: ${chamado.protocolo}
 Status: ${chamado.status}
 
-Digite menu para voltar ao início.`,
+Digite menu para voltar ao inÃ­cio.`,
         estado: "menu",
         dados: {},
       };
@@ -967,7 +968,7 @@ async function handleMessage(mensagem, send = sendText) {
   const idMensagem = mensagem.id || `sem-id-${crypto.randomUUID()}`;
 
   if (!telefone) {
-    console.warn("Mensagem recebida sem número de origem.");
+    console.warn("Mensagem recebida sem nÃºmero de origem.");
     return;
   }
 
@@ -1000,8 +1001,8 @@ async function handleMessage(mensagem, send = sendText) {
     comando === "sair" ||
     ehSaudacao(texto);
 
-  // Quando o usuário pede atendimento humano, o bot aguarda.
-  // Os comandos menu/sair/cancelar e saudações continuam disponíveis.
+  // Quando o usuÃ¡rio pede atendimento humano, o bot aguarda.
+  // Os comandos menu/sair/cancelar e saudaÃ§Ãµes continuam disponÃ­veis.
   if (conversa.bot_pausado && !comandoPermitidoPausado) {
     return;
   }
@@ -1012,7 +1013,7 @@ async function handleMessage(mensagem, send = sendText) {
   const resposta = texto
     ? await fluxo(conversa, texto, professorConhecido)
     : {
-        texto: "Por enquanto consigo entender apenas mensagens de texto. Digite menu para ver as opções.",
+        texto: "Por enquanto consigo entender apenas mensagens de texto. Digite menu para ver as opÃ§Ãµes.",
         estado: conversa.estado || "menu",
         dados: conversa.dados || {},
         pausar: !!conversa.bot_pausado,
@@ -1049,7 +1050,7 @@ async function handleMessage(mensagem, send = sendText) {
 }
 
 // ============================================================
-// CONEXÃO WHATSAPP POR QR CODE (BAILEYS)
+// CONEXÃƒO WHATSAPP POR QR CODE (BAILEYS)
 // ============================================================
 
 let waState = {
@@ -1067,7 +1068,7 @@ if (QR_MODE) {
     });
   } catch (error) {
     console.error(
-      "Falha ao carregar o WhatsApp (Baileys). Verifique as dependências e o arquivo wa.js:",
+      "Falha ao carregar o WhatsApp (Baileys). Verifique as dependÃªncias e o arquivo wa.js:",
       error
     );
   }
@@ -1095,7 +1096,7 @@ const server = http.createServer((req, res) => {
       .end(req.method === "HEAD" ? undefined : JSON.stringify({ status: "ok" }));
   }
 
-  // Página para visualizar o QR Code. Protegida por VERIFY_TOKEN.
+  // PÃ¡gina para visualizar o QR Code. Protegida por VERIFY_TOKEN.
   if (QR_MODE && req.method === "GET" && url.pathname === "/qr") {
     if (!VERIFY_TOKEN || url.searchParams.get("key") !== VERIFY_TOKEN) {
       return res.writeHead(403).end("Acesso negado");
@@ -1105,7 +1106,7 @@ const server = http.createServer((req, res) => {
 
     if (waState.status === "conectado") {
       const numero = String(waState.me || "").split(":")[0].split("@")[0];
-      conteudo = `<h2>WhatsApp conectado</h2><p>Número: ${numero}</p>`;
+      conteudo = `<h2>WhatsApp conectado</h2><p>NÃºmero: ${numero}</p>`;
     } else if (waState.qr) {
       conteudo = `<h2>Escaneie com o WhatsApp</h2>
         <p>No celular: Aparelhos conectados &gt; Conectar um aparelho</p>
@@ -1146,7 +1147,7 @@ const server = http.createServer((req, res) => {
       body += parte;
       if (body.length > MAX_BODY) {
         tamanhoExcedido = true;
-        res.writeHead(413).end("Conteúdo muito grande");
+        res.writeHead(413).end("ConteÃºdo muito grande");
         req.destroy();
       }
     });
@@ -1211,7 +1212,7 @@ const server = http.createServer((req, res) => {
   }
 
   // Rota Meta mantida apenas para compatibilidade futura.
-  // Não é necessária no funcionamento por QR Code.
+  // NÃ£o Ã© necessÃ¡ria no funcionamento por QR Code.
   if (!QR_MODE && req.method === "GET" && url.pathname === "/webhook") {
     if (
       url.searchParams.get("hub.mode") === "subscribe" &&
@@ -1276,7 +1277,7 @@ const server = http.createServer((req, res) => {
           }
         }
       } catch (error) {
-        console.error("Payload inválido:", error.message);
+        console.error("Payload invÃ¡lido:", error.message);
       }
     });
 
